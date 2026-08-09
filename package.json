@@ -1,0 +1,25 @@
+{
+  "name": "order-inventory-api",
+  "version": "1.0.0",
+  "description": "REST API for managing orders, products, inventory, and stock operations",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KrithigaSiv/order-inventory-api.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KrithigaSiv/order-inventory-api/issues"
+  },
+  "homepage": "https://github.com/KrithigaSiv/order-inventory-api#readme",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "pg": "^8.22.0"
+  }
+}
