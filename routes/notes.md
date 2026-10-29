@@ -127,3 +127,54 @@ PostgreSQL = database
 ## Deferred
 - Rate limiting
 - Redis caching
+
+# 5th Weekend — Rate Limiting, Testing & Redis
+
+## Rate Limiting
+
+- Installed `express-rate-limit`
+- Added limiter on `POST /orders` (10 per IP per minute)
+- Added `trust proxy` for Render
+
+## Testing
+
+- Sent 11 requests with a curl loop
+- Requests 1–8 → `201`, 9–10 → `409`, 11 → `429`
+- Added Jest + Supertest
+- Test: stock `5`, 10 simultaneous orders
+- Result: 5 → `201`, 5 → `409`, final stock → `0`
+- Removed `FOR UPDATE` → test failed (oversell)
+- Put it back → test passed
+
+## Redis Caching
+
+- Created Upstash Redis database
+- Added `REDIS_URL` in `.env`
+- `GET /products` reads from Redis, falls back to DB
+- Cache expires after 60 seconds
+- Cache cleared after `COMMIT`
+
+## Errors Fixed
+
+- `require` not working with `import` → used `import`
+- `rateLimit` declared twice → removed old block
+- Jest import error → added `"type": "module"`
+- Folder named `" tests"` → renamed to `tests`
+
+## Completed
+
+- Rate limiting
+- Automated concurrency test
+- Redis caching
+- README updated
+
+## Deferred
+
+- GitHub Actions CI
+
+## Next Steps
+
+- Reset Neon password
+- Add `REDIS_URL` in Render
+- Push code
+- Update resume

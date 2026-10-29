@@ -1,39 +1,78 @@
-# order-inventory-api
-REST API for managing orders, products, inventory, and stock operations
 # Order Inventory API
 
-A small Express + PostgreSQL API for managing products and orders, built to
-handle concurrent order placement safely.
+A REST API for managing products and orders, built to handle concurrent order
+placement safely. It prevents overselling with database transactions and row
+locking, and it is verified by an automated concurrency test.
 
-Live: https://order-inventory-api-m3cu.onrender.com
+**Live:** https://order-inventory-api-m3cu.onrender.com
 
-## Stack
+> The free hosting tiers sleep after inactivity, so the first request may take
+> 30-60 seconds to respond.
+
+## Tech stack
 - Node.js / Express
 - PostgreSQL (hosted on Neon)
+- Redis (hosted on Upstash) for caching
+- Jest + Supertest for testing
 - Deployed on Render
 
+## Features
+- Create and list products
+- Place orders with stock checking and deduction in a single transaction
+- Fetch an order with its items
+- Redis caching on `GET /products` with invalidation when stock changes
+- Per-IP rate limiting on `POST /orders` (10 requests per minute)
+- Automated concurrency test
+
 ## Setup
-1. `npm install`
+1. Clone the repo and run `npm install`
 2. Create a `.env` file:
 
-DATABASE_URL=postgresql://neondb_owner:npg_A3jxQznBUga2@ep-wandering-dream-axl36qll-pooler.c-4.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+```
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require
+REDIS_URL=rediss://default:PASSWORD@HOST:6379
+```
 
-3. `npm start`
+3. Create the tables `products`, `orders`, and `order_items` in your database
+4. Start the server: `npm start`
+5. Run the tests: `npm test`
 
 ## Endpoints
-- `POST /products` — create a product
-- `GET /products` — list all products
-- `POST /orders` — place an order (body: `{ product_id, quantity }`)
-- `GET /orders/:id` — get an order and its items
+| Method | Route | Description |
+|---|---|---|
+| POST | `/products` | Create a product (`{ name, price, stock }`) |
+| GET | `/products` | List all products (cached for 60 seconds) |
+| POST | `/orders` | Place an order (`{ product_id, quantity }`) |
+| GET | `/orders/:id` | Get an order and its items |
 
-## The interesting part: race condition handling
-`POST /orders` uses `SELECT ... FOR UPDATE` inside a transaction to lock the
-product row while checking and deducting stock. This prevents two concurrent
-requests from both succeeding when only one item is left in stock. Verified
-with concurrent curl requests both locally and against the live deployment —
-one request succeeds, the other correctly receives a 409 with no oversell.
+`POST /orders` responses: `201` created, `400` invalid input, `404` product
+not found, `409` not enough stock, `429` rate limit exceeded.
 
-## Known limitations / next steps
+## How overselling is prevented
+`POST /orders` runs inside a transaction and uses `SELECT ... FOR UPDATE` to
+lock the product row while stock is checked and deducted. If two requests
+order the last item at the same time, the second one waits for the first to
+finish, then sees the updated stock and receives a `409`.
+
+**Testing:** an automated Jest + Supertest test creates a product with stock 5
+and sends 10 simultaneous orders. It asserts that exactly 5 succeed, 5 are
+rejected, and the final stock is 0. Removing `FOR UPDATE` makes the test fail,
+which shows that the locking is what prevents the bug. The same behavior was
+also verified against the live deployment.
+
+## Caching
+`GET /products` reads from Redis first and falls back to the database on a
+cache miss. The cache expires after 60 seconds and is cleared after every
+committed order or new product, so stock stays accurate. If Redis is
+unavailable, the API falls back to the database instead of failing.
+
+## Rate limiting
+`POST /orders` is limited to 10 requests per IP per minute using
+`express-rate-limit`. Requests over the limit receive a `429`.
+
+## Known limitations / future improvements
 - No authentication
-- No rate limiting on `/orders` yet
-- No caching on `GET /products` yet
+- Orders support a single product per request (multi-item orders planned)
+- No input validation library yet (basic checks only)
+- No CI pipeline yet (GitHub Actions planned)
+- The test runs against the real database rather than a separate test database

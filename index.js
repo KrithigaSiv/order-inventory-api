@@ -3,12 +3,15 @@ import pg from "pg";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import Redis from "ioredis";
+import cors from "cors";
+
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 app.set("trust proxy", 1);
+app.use(cors());
 
 const orderLimiter = rateLimit({
   windowMs: 60 * 1000,
