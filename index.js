@@ -4,6 +4,15 @@ app.use(express.json());
 import pg from "pg";
 import dotenv from "dotenv";
 dotenv.config();
+import rateLimit from "express-rate-limit";
+
+app.set("trust proxy", 1); // needed on Render
+
+const orderLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: process.env.NODE_ENV === "test" ? 1000 : 10,            
+  message: { error: "Too many requests, try again later" },
+});
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -37,7 +46,7 @@ app.get("/products", async (req, res) => {
   res.json(result.rows);
 });
 
-app.post('/orders', async (req, res) => {
+app.post('/orders',  orderLimiter , async (req, res) => {
   const { product_id, quantity } = req.body;
 
   if (!product_id || !quantity || quantity <= 0) {
@@ -130,4 +139,10 @@ app.get("/orders/:id", async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log("Server running on http://localhost:3000"));
+
+if (process.env.NODE_ENV !== "test") {
+  app.listen(3000, () => console.log("Server running on http://localhost:3000"));
+}
+
+export { app, pool };;
+

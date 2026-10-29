@@ -69,3 +69,61 @@ PostgreSQL = database
 - Add rate limiting on `POST /orders`
 - Write README
 - Deploy to Render
+
+# 4th Weekend — Race Condition Fix & Deployment
+
+## Race Condition Fix
+- Changed `pg.Client` → `pg.Pool` in `index.js`
+- Used transactions for `POST /orders`
+- Used `SELECT ... FOR UPDATE` to lock the product row
+- Stock is checked and deducted inside the transaction
+- Prevents two users from buying the same last item
+
+## Testing
+- Created a product with stock = `1`
+- Sent 2 order requests at the same time
+- One request → `201 Created`
+- Other request → `409 Not Enough Stock`
+- Final stock → `0`
+- No overselling
+
+## New API
+- Added `GET /orders/:id`
+- Returns order details using:
+  - `orders`
+  - `order_items`
+  - `products`
+
+## Render Deployment
+
+### Error 1
+- Render tried to run `yarn start`
+- No `start` script existed
+- Fixed Start Command to:
+  `node index.js`
+
+### Error 2
+- `/test-db` returned `500`
+- `DATABASE_URL` was missing in Render
+- Added Neon `DATABASE_URL` in Render Environment
+- `/test-db` then returned a valid timestamp
+
+## Live Testing
+- Reset stock to `1`
+- Ran the same concurrent order test on the live Render URL
+- One → `201`
+- One → `409`
+- No overselling
+
+## Completed
+- Race condition fixed
+- Tested locally
+- `GET /orders/:id`
+- Deployed to Render
+- Connected Neon in production
+- Tested live deployment
+- README completed
+
+## Deferred
+- Rate limiting
+- Redis caching
