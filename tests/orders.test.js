@@ -1,9 +1,10 @@
 import request from "supertest";
-import { app, pool } from "../index.js";
+import { app, pool, redis } from "../index.js";
 
 afterAll(async () => {
-  await pool.end(); // close DB connections so Jest can exit
-});
+  await pool.end();
+  await redis.quit();
+});;
 
 test("10 simultaneous orders on stock 5 -> exactly 5 succeed", async () => {
   // 1. create a product with stock 5
